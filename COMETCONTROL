@@ -1,0 +1,141 @@
+import pygame
+import random
+import pygame_gui
+
+# Initialize Pygame
+pygame.init()
+
+# Set up the screen
+width = 1200
+height = 800
+screen = pygame.display.set_mode((width, height))
+clock = pygame.time.Clock()
+
+# Define colors
+YELLOW = (255, 255, 0)
+WHITE = (255, 255, 255)
+
+
+class Boid:
+    def __init__(self, speed, color_speed):
+        self.position = pygame.Vector2(random.randint(0, width), random.randint(0, height))
+        self.velocity = pygame.Vector2(1, 0).rotate(random.randint(0, 360))
+        self.history = []  # Store previous positions for the trail
+        self.speed = speed
+        self.color_speed = color_speed
+        self.color = YELLOW
+        self.color_timer = 0
+
+    def update(self, trail_length):
+        self.position += self.velocity * self.speed
+
+        # Wrap around the screen
+        if self.position.x > width:
+            self.position.x = 0
+        elif self.position.x < 0:
+            self.position.x = width
+        if self.position.y > height:
+            self.position.y = 0
+        elif self.position.y < 0:
+            self.position.y = height
+
+        self.history.append(self.position.copy())  # Add current position to the history
+        if len(self.history) > trail_length:  # Limit the length of the trail
+            self.history.pop(0)  # Remove oldest position from the history
+
+        # Update color
+        self.color_timer += self.color_speed
+        self.color = pygame.Color(0)
+        self.color.hsva = (self.color_timer % 360, 100, 100, 100)
+
+    def draw(self):
+        pygame.draw.circle(screen, self.color, (int(self.position.x), int(self.position.y)), 5)
+
+    def draw_trail(self):
+        for i, pos in enumerate(self.history):
+            alpha = int((i / len(self.history)) * 255)  # Vary the alpha value for a colorful trail
+            trail_color = tuple(int(c) for c in self.color[:3]) + (alpha,)
+            pygame.draw.circle(screen, trail_color, (int(pos.x), int(pos.y)), 2)
+
+
+# Set up Pygame GUI
+manager = pygame_gui.UIManager((width, height))
+
+# Create boids
+num_boids = 120
+boids = [Boid(1, 1) for _ in range(num_boids)]
+# Color Speed Slider
+color_speed_slider = pygame_gui.elements.UIHorizontalSlider(
+    relative_rect=pygame.Rect((10, 10), (200, 20)),
+    start_value=1,  # Initial color speed
+    value_range=(0.1, 10),  # Minimum and maximum color speed
+    manager=manager
+)
+color_speed_label = pygame_gui.elements.UILabel(
+    relative_rect=pygame.Rect((220, 10), (100, 20)),
+    text="Color Speed",  # Label for the color speed slider
+    manager=manager
+)
+# Speed Slider
+speed_slider = pygame_gui.elements.UIHorizontalSlider(
+    relative_rect=pygame.Rect((10, 40), (200, 20)),
+    start_value=1,  # Initial speed
+    value_range=(0.1, 100),  # Minimum and maximum speed
+    manager=manager
+)
+speed_label = pygame_gui.elements.UILabel(
+    relative_rect=pygame.Rect((220, 40), (100, 20)),
+    text="Speed",  # Label for the speed slider
+    manager=manager
+)
+# Trail Length Slider
+trail_length_slider = pygame_gui.elements.UIHorizontalSlider(
+    relative_rect=pygame.Rect((10, 70), (200, 20)),
+    start_value=50,  # Initial trail length
+    value_range=(10, 100),  # Minimum and maximum trail length
+    manager=manager
+)
+trail_length_label = pygame_gui.elements.UILabel(
+    relative_rect=pygame.Rect((220, 70), (100, 20)),
+    text="Trail Length",  # Label for the trail length slider
+    manager=manager
+)
+
+# Game loop
+running = True
+while running:
+    # Event handling
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        # Pass events to GUI manager
+        manager.process_events(event)
+
+    # Update the GUI manager
+    manager.update(pygame.time.Clock().tick(60) / 1000.0)
+
+    # Get the current values from the sliders
+    color_speed = color_speed_slider.get_current_value()
+    speed = speed_slider.get_current_value()
+    trail_length = int(trail_length_slider.get_current_value())
+
+    screen.fill((0, 0, 0))
+
+    # Update and draw boids
+    for boid in boids:
+        boid.speed = speed
+        boid.color_speed = color_speed
+        boid.update(trail_length)
+        boid.draw()
+        boid.draw_trail()
+
+    # Draw GUI
+    manager.draw_ui(screen)
+
+    # Update the display
+    pygame.display.flip()
+    clock.tick(60)
+
+# Quit the game
+pygame.quit()
