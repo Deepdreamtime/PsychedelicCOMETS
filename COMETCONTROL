@@ -26,7 +26,7 @@ class Boid:
         self.color = YELLOW
         self.color_timer = 0
 
-    def update(self, trail_length):
+    def update(self, angle_change):
         self.position += self.velocity * self.speed
 
         # Wrap around the screen
@@ -39,9 +39,8 @@ class Boid:
         elif self.position.y < 0:
             self.position.y = height
 
-        self.history.append(self.position.copy())  # Add current position to the history
-        if len(self.history) > trail_length:  # Limit the length of the trail
-            self.history.pop(0)  # Remove oldest position from the history
+        # Rotate velocity vector by angle_change degrees
+        self.velocity = self.velocity.rotate(angle_change)
 
         # Update color
         self.color_timer += self.color_speed
@@ -88,16 +87,16 @@ speed_label = pygame_gui.elements.UILabel(
     text="Speed",  # Label for the speed slider
     manager=manager
 )
-# Trail Length Slider
-trail_length_slider = pygame_gui.elements.UIHorizontalSlider(
+# Angle Change Slider
+angle_change_slider = pygame_gui.elements.UIHorizontalSlider(
     relative_rect=pygame.Rect((10, 70), (200, 20)),
-    start_value=50,  # Initial trail length
-    value_range=(10, 100),  # Minimum and maximum trail length
+    start_value=0,  # Set the initial value of the angle change parameter here
+    value_range=(-180, 180),  # Set the range of the angle change parameter here
     manager=manager
 )
-trail_length_label = pygame_gui.elements.UILabel(
+angle_change_label = pygame_gui.elements.UILabel(
     relative_rect=pygame.Rect((220, 70), (100, 20)),
-    text="angle change",  # Label for the trail length slider
+    text="Angle Change",  # Change the label text here
     manager=manager
 )
 
@@ -116,19 +115,21 @@ while running:
     manager.update(pygame.time.Clock().tick(60) / 1000.0)
 
     # Get the current values from the sliders
-    color_speed = color_speed_slider.get_current_value()
-    speed = speed_slider.get_current_value()
-    trail_length = int(trail_length_slider.get_current_value())
+    angle_change = angle_change_slider.get_current_value()
 
-    screen.fill((0, 0, 0))
+# Get the current values from the sliders
+color_speed = color_speed_slider.get_current_value()
+speed = speed_slider.get_current_value()
+trail_length = int(trail_length_slider.get_current_value())
+angle_change = int(angle_change_slider.get_current_value())
 
-    # Update and draw boids
-    for boid in boids:
-        boid.speed = speed
-        boid.color_speed = color_speed
-        boid.update(trail_length)
-        boid.draw()
-        boid.draw_trail()
+# Update and draw boids
+for boid in boids:
+    boid.speed = speed
+    boid.color_speed = color_speed
+    boid.update(trail_length, angle_change)
+    boid.draw()
+    boid.draw_trail()
 
     # Draw GUI
     manager.draw_ui(screen)
